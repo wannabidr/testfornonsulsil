@@ -47,13 +47,42 @@ module lcd_test_top(
             state <= INIT;
             counter <= 0;
             refresh <= 0;
-            // 초기 메시지 설정
+            
             // Line 1: "Morse Translator"
-            line1 <= {"M", "o", "r", "s", "e", " ", "T", "r", 
-                      "a", "n", "s", "l", "a", "t", "o", "r"};
+            line1[127:120] <= 8'h4D;  // M
+            line1[119:112] <= 8'h6F;  // o
+            line1[111:104] <= 8'h72;  // r
+            line1[103:96]  <= 8'h73;  // s
+            line1[95:88]   <= 8'h65;  // e
+            line1[87:80]   <= 8'h20;  // space
+            line1[79:72]   <= 8'h54;  // T
+            line1[71:64]   <= 8'h72;  // r
+            line1[63:56]   <= 8'h61;  // a
+            line1[55:48]   <= 8'h6E;  // n
+            line1[47:40]   <= 8'h73;  // s
+            line1[39:32]   <= 8'h6C;  // l
+            line1[31:24]   <= 8'h61;  // a
+            line1[23:16]   <= 8'h74;  // t
+            line1[15:8]    <= 8'h6F;  // o
+            line1[7:0]     <= 8'h72;  // r
+            
             // Line 2: "  LCD Test OK  "
-            line2 <= {" ", " ", "L", "C", "D", " ", "T", "e",
-                      "s", "t", " ", "O", "K", " ", " ", " "};
+            line2[127:120] <= 8'h20;  // space
+            line2[119:112] <= 8'h20;  // space
+            line2[111:104] <= 8'h4C;  // L
+            line2[103:96]  <= 8'h43;  // C
+            line2[95:88]   <= 8'h44;  // D
+            line2[87:80]   <= 8'h20;  // space
+            line2[79:72]   <= 8'h54;  // T
+            line2[71:64]   <= 8'h65;  // e
+            line2[63:56]   <= 8'h73;  // s
+            line2[55:48]   <= 8'h74;  // t
+            line2[47:40]   <= 8'h20;  // space
+            line2[39:32]   <= 8'h4F;  // O
+            line2[31:24]   <= 8'h4B;  // K
+            line2[23:16]   <= 8'h20;  // space
+            line2[15:8]    <= 8'h20;  // space
+            line2[7:0]     <= 8'h20;  // space
         end else begin
             case (state)
                 INIT: begin
@@ -65,16 +94,21 @@ module lcd_test_top(
                 end
                 
                 DISPLAY: begin
-                    refresh <= 0;
-                    if (counter < 100_000_000) begin // 1초 대기
+                    if (counter < 10) begin
                         counter <= counter + 1;
+                        refresh <= 1;
                     end else begin
+                        refresh <= 0;
                         state <= DONE;
                     end
                 end
                 
                 DONE: begin
-                    // LCD에 메시지 표시 완료
+                    refresh <= 0;
+                end
+                
+                default: begin
+                    state <= INIT;
                 end
             endcase
         end

@@ -17,16 +17,22 @@ HBE-Combo 2-DLD 보드의 16x2 Text LCD를 제어하는 테스트 모듈입니�
 ## LCD 제어 방식
 ### 초기화 시퀀스
 1. 15ms 대기 (전원 안정화)
-2. Function Set (0x38): 8-bit 모드, 2-line, 5x8 폰트
-3. Display Control (0x0C): 디스플레이 ON, 커서 OFF, 깜빡임 OFF
+2. Function Set (0x38): 8-bit 모드, 2-line, 5x8 폰트 (3회 반복)
+3. Display Control (0x0C): 디스플레이 ON, 커서 OFF
 4. Clear Display (0x01): 화면 클리어
 5. Entry Mode Set (0x06): 커서 증가 모드
 
 ### 인터페이스 신호
 - `lcd_rs`: Register Select (0=명령어, 1=데이터)
 - `lcd_rw`: Read/Write (0=쓰기, 1=읽기)
-- `lcd_e`: Enable 신호 (falling edge에서 데이터 래치)
+- `lcd_e`: Enable 신호 (high 동안 데이터 유지, low로 전환 시 래치)
 - `lcd_data[7:0]`: 8-bit 데이터 버스
+
+### 타이밍 설계
+- 시스템 클럭: 100MHz
+- LCD 제어 클럭: 1kHz (1ms 주기)
+- 모든 명령/데이터 전송: 1ms 이상 유지
+- 초기화 후 준비 신호(`ready`) 활성화
 
 ## Vivado에서 빌드 방법
 
@@ -71,11 +77,12 @@ wait_on_run impl_1
 - 리셋 버튼을 눌러 화면이 다시 초기화되는지 확인
 
 ## 타이밍 사양
-- LCD 클럭: 1MHz (100MHz 시스템 클럭을 50분주)
-- Enable 펄스 폭: 최소 450ns (약 500ns 사용)
-- 명령어 실행 시간: 50μs
+- LCD 제어 클럭: 1kHz (100MHz 시스템 클럭을 100000분주)
+- Enable 펄스 폭: 1ms (HD44780 규격 충분히 만족)
+- 명령어 실행 시간: 1~5ms (상태별 차등)
 - Clear Display 시간: 2ms
 - 초기화 대기 시간: 15ms
+- 문자 출력 시간: 각 문자당 1ms
 
 ## 모듈 인터페이스
 
