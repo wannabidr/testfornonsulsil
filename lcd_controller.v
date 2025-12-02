@@ -4,29 +4,42 @@
 // ============================================================================
 
 module lcd_controller (
-    input wire clk,           // System clock (typically 50MHz or 100MHz)
-    input wire rst_n,         // Reset (active low)
-    
-    // LCD Interface (4-bit mode)
-    output reg lcd_rs,        // Register Select (0=Instruction, 1=Data)
-    output reg lcd_e,         // Enable signal
-    output reg [3:0] lcd_db,  // Data bus (D7-D4, upper 4 bits)
-    
-    // Control Interface
-    input wire [7:0] char_data,    // ASCII character to display
-    input wire [4:0] cursor_pos,   // Cursor position (0-15 for line 1, 16-31 for line 2)
-    input wire write_enable,       // Write enable signal
-    output reg ready                // Ready signal (1 when LCD is ready for next command)
+    clk,           // System clock (typically 50MHz or 100MHz)
+    rst_n,         // Reset (active low)
+    lcd_rs,        // Register Select (0=Instruction, 1=Data)
+    lcd_e,         // Enable signal
+    lcd_db,        // Data bus (D7-D4, upper 4 bits)
+    char_data,     // ASCII character to display
+    cursor_pos,    // Cursor position (0-15 for line 1, 16-31 for line 2)
+    write_enable,  // Write enable signal
+    ready          // Ready signal (1 when LCD is ready for next command)
 );
+
+// Port declarations
+input clk;
+input rst_n;
+output lcd_rs;
+output lcd_e;
+output [3:0] lcd_db;
+input [7:0] char_data;
+input [4:0] cursor_pos;
+input write_enable;
+output ready;
+
+// Register declarations for outputs
+reg lcd_rs;
+reg lcd_e;
+reg [3:0] lcd_db;
+reg ready;
 
 // ============================================================================
 // Internal Signals
 // ============================================================================
-localparam CLK_FREQ = 50_000_000;  // 50MHz clock frequency
+localparam CLK_FREQ = 50000000;  // 50MHz clock frequency
 localparam DELAY_15MS = CLK_FREQ * 15 / 1000;      // 15ms delay
 localparam DELAY_5MS = CLK_FREQ * 5 / 1000;       // 5ms delay
-localparam DELAY_100US = CLK_FREQ * 100 / 1_000_000; // 100us delay
-localparam DELAY_40US = CLK_FREQ * 40 / 1_000_000;   // 40us delay
+localparam DELAY_100US = CLK_FREQ * 100 / 1000000; // 100us delay
+localparam DELAY_40US = CLK_FREQ * 40 / 1000000;   // 40us delay
 
 reg [31:0] delay_counter;
 reg [4:0] state;
@@ -224,6 +237,10 @@ always @(*) begin
         WRITE_CHAR2: begin
             if (delay_counter == 0)
                 next_state = INIT_DONE;
+        end
+        
+        default: begin
+            next_state = IDLE;
         end
     endcase
 end

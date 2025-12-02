@@ -4,17 +4,21 @@
 // ============================================================================
 
 module lcd_test_top (
-    input wire clk,           // System clock (50MHz)
-    input wire rst_n,         // Reset button (active low)
-    
-    // LCD Interface
-    output wire lcd_rs,       // Register Select
-    output wire lcd_e,        // Enable
-    output wire [3:0] lcd_db, // Data bus (D7-D4)
-    
-    // Test control (optional - can use switches or buttons)
-    input wire test_start     // Start test sequence (can be tied to 1 for auto-start)
+    clk,           // System clock (50MHz)
+    rst_n,         // Reset button (active low)
+    lcd_rs,        // Register Select
+    lcd_e,         // Enable
+    lcd_db,        // Data bus (D7-D4)
+    test_start     // Start test sequence (can be tied to 1 for auto-start)
 );
+
+// Port declarations
+input clk;
+input rst_n;
+output lcd_rs;
+output lcd_e;
+output [3:0] lcd_db;
+input test_start;
 
 // ============================================================================
 // Internal Signals
@@ -104,7 +108,7 @@ always @(posedge clk or negedge rst_n) begin
                 // Wait for LCD initialization and test_start signal
                 if (lcd_ready) begin
                     if (test_start) begin
-                        delay_counter <= 50_000_000;  // 1 second delay before starting
+                        delay_counter <= 50000000;  // 1 second delay before starting
                         test_state <= WAIT_READY;
                     end
                 end
@@ -126,7 +130,7 @@ always @(posedge clk or negedge rst_n) begin
                     // Line 2: positions 16-24
                     cursor_pos <= 16 + (char_index - 11);
                 end
-                delay_counter <= 50_000_000 / 1000;  // 1ms delay
+                delay_counter <= 50000000 / 1000;  // 1ms delay
                 test_state <= WRITE_CHAR;
             end
             
@@ -150,13 +154,13 @@ always @(posedge clk or negedge rst_n) begin
                 
                 if (char_index == 10) begin
                     // Finished line 1, move to line 2
-                    delay_counter <= 50_000_000 / 10;  // 100ms delay
+                    delay_counter <= 50000000 / 10;  // 100ms delay
                     test_state <= LINE2_START;
                 end else if (char_index == 19) begin
                     // Finished all characters
                     test_state <= DONE;
                 end else begin
-                    delay_counter <= 50_000_000 / 1000;  // 1ms delay
+                    delay_counter <= 50000000 / 1000;  // 1ms delay
                     test_state <= SET_CURSOR;
                 end
             end
@@ -172,6 +176,10 @@ always @(posedge clk or negedge rst_n) begin
             DONE: begin
                 write_enable <= 1'b0;
                 // Stay in DONE state
+            end
+            
+            default: begin
+                test_state <= IDLE;
             end
         endcase
     end
