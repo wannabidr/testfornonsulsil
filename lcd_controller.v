@@ -34,9 +34,9 @@ module lcd_controller(
     reg [31:0] delay_counter;
     reg writing_line2;
     
-    // 클럭 분주기 (약 1kHz LCD 클럭 생성, 100MHz -> 1kHz)
-    // 1kHz = 1ms 주기
-    reg [16:0] clk_div;
+    // 클럭 분주기 (1MHz LCD 클럭 생성, 100MHz -> 1MHz)
+    // 1MHz = 1us 주기
+    reg [6:0] clk_div;
     reg lcd_clk_en;
     
     always @(posedge clk or posedge reset) begin
@@ -44,7 +44,7 @@ module lcd_controller(
             clk_div <= 0;
             lcd_clk_en <= 0;
         end else begin
-            if (clk_div == 99999) begin  // 100MHz / 100000 = 1kHz
+            if (clk_div == 99) begin  // 100MHz / 100 = 1MHz
                 clk_div <= 0;
                 lcd_clk_en <= 1;
             end else begin
@@ -54,11 +54,13 @@ module lcd_controller(
         end
     end
     
-    // 타이밍 생성 (1kHz 클럭 기준, 1 tick = 1ms)
-    localparam DELAY_15MS   = 32'd15;     // 15ms
-    localparam DELAY_5MS    = 32'd5;      // 5ms
-    localparam DELAY_2MS    = 32'd2;      // 2ms
-    localparam DELAY_1MS    = 32'd1;      // 1ms
+    // 타이밍 생성 (1MHz 클럭 기준, 1 tick = 1us)
+    localparam DELAY_15MS   = 32'd15000;  // 15ms = 15000us
+    localparam DELAY_5MS    = 32'd5000;   // 5ms = 5000us
+    localparam DELAY_2MS    = 32'd2000;   // 2ms = 2000us
+    localparam DELAY_1MS    = 32'd1000;   // 1ms = 1000us
+    localparam DELAY_100US  = 32'd100;    // 100us
+    localparam DELAY_50US   = 32'd50;     // 50us
     
     // Enable 펄스 생성 (마이크로초 단위)
     reg [7:0] enable_counter;
@@ -116,7 +118,7 @@ module lcd_controller(
                     lcd_rs <= 0;
                     lcd_data <= 8'h38;
                     lcd_e <= 1;
-                    if (delay_counter >= DELAY_1MS) begin
+                    if (delay_counter >= DELAY_100US) begin
                         lcd_e <= 0;
                         state <= INIT_FUNC3;
                         delay_counter <= 0;
@@ -129,7 +131,7 @@ module lcd_controller(
                     lcd_rs <= 0;
                     lcd_data <= 8'h38;
                     lcd_e <= 1;
-                    if (delay_counter >= DELAY_1MS) begin
+                    if (delay_counter >= DELAY_100US) begin
                         lcd_e <= 0;
                         state <= INIT_DISPLAY;
                         delay_counter <= 0;
@@ -191,7 +193,7 @@ module lcd_controller(
                     lcd_rs <= 0;
                     lcd_data <= 8'h80;  // DDRAM 주소 0x00 (Line 1)
                     lcd_e <= 1;
-                    if (delay_counter >= DELAY_1MS) begin
+                    if (delay_counter >= DELAY_100US) begin
                         lcd_e <= 0;
                         state <= WRITE_LINE1;
                         delay_counter <= 0;
@@ -206,7 +208,7 @@ module lcd_controller(
                         // 비트 슬라이싱: MSB부터 추출
                         lcd_data <= line1[(15-char_count)*8 +: 8];
                         lcd_e <= 1;
-                        if (delay_counter >= DELAY_1MS) begin
+                        if (delay_counter >= DELAY_50US) begin
                             lcd_e <= 0;
                             char_count <= char_count + 1;
                             delay_counter <= 0;
@@ -224,7 +226,7 @@ module lcd_controller(
                     lcd_rs <= 0;
                     lcd_data <= 8'hC0;  // DDRAM 주소 0x40 (Line 2)
                     lcd_e <= 1;
-                    if (delay_counter >= DELAY_1MS) begin
+                    if (delay_counter >= DELAY_100US) begin
                         lcd_e <= 0;
                         state <= WRITE_LINE2;
                         delay_counter <= 0;
@@ -238,7 +240,7 @@ module lcd_controller(
                         lcd_rs <= 1;
                         lcd_data <= line2[(15-char_count)*8 +: 8];
                         lcd_e <= 1;
-                        if (delay_counter >= DELAY_1MS) begin
+                        if (delay_counter >= DELAY_50US) begin
                             lcd_e <= 0;
                             char_count <= char_count + 1;
                             delay_counter <= 0;
@@ -253,7 +255,7 @@ module lcd_controller(
                 
                 WRITE_WAIT: begin
                     lcd_e <= 0;
-                    if (delay_counter >= DELAY_2MS) begin
+                    if (delay_counter >= DELAY_100US) begin
                         state <= READY_STATE;
                         delay_counter <= 0;
                     end else begin
