@@ -1,14 +1,13 @@
 //==============================================================================
 // Morse Buzzer Test Top Module
-// Keypad input -> Morse encode -> Buzzer output
+// 12 Button input -> Morse encode -> Buzzer output
 //==============================================================================
 module morse_buzzer_top (
-    input  wire       clk,          // 25MHz system clock
-    input  wire       rst_n,        // Active low reset (directly active)
-    input  wire [3:0] keypad_col,   // Keypad column input
-    output wire [3:0] keypad_row,   // Keypad row scan output
-    output wire       buzzer,       // Piezo buzzer output
-    output wire [7:0] led_debug     // Debug LEDs
+    input  wire        clk,          // 25MHz system clock
+    input  wire        rst_n,        // Active low reset
+    input  wire [11:0] btn,          // 12 push buttons (A-L)
+    output wire        buzzer,       // Piezo buzzer output
+    output wire [7:0]  led_debug     // Debug LEDs
 );
 
     // Internal signals
@@ -33,12 +32,11 @@ module morse_buzzer_top (
         .clk_800hz (clk_800hz)
     );
 
-    // Keypad scanner instance
-    keypad_scanner u_keypad_scanner (
+    // Button input instance (replaces keypad_scanner)
+    button_input u_button_input (
         .clk       (clk),
         .rst_n     (rst_n),
-        .col       (keypad_col),
-        .row       (keypad_row),
+        .btn       (btn),
         .key_code  (key_code),
         .key_valid (key_valid)
     );
@@ -82,12 +80,15 @@ module morse_buzzer_top (
     end
 
     // Debug LED output
-    // [7:5] = morse_len (current)
-    // [4:0] = key_code (last pressed)
-    assign led_debug[4:0] = current_char;
+    // [3:0] = key_code (last pressed, 0-11)
+    // [4]   = key_valid
+    // [5]   = buzzer_busy
+    // [6]   = buzzer output
+    // [7]   = reserved
+    assign led_debug[3:0] = current_char[3:0];
+    assign led_debug[4]   = key_valid;
     assign led_debug[5]   = buzzer_busy;
-    assign led_debug[6]   = key_valid;
-    assign led_debug[7]   = buzzer;
+    assign led_debug[6]   = buzzer;
+    assign led_debug[7]   = 1'b0;
 
 endmodule
-
