@@ -1,5 +1,6 @@
 // 8-digit 7-Segment Controller
 // Common Cathode (HIGH = ON)
+// New character appears on leftmost digit, existing chars shift right
 
 module seg7_controller (
     input  wire       clk,        // 1MHz main clock for char_valid detection
@@ -12,8 +13,8 @@ module seg7_controller (
     output reg  [7:0] digit_sel
 );
 
+    // Character buffer: [0]=leftmost, [7]=rightmost
     reg [7:0] char_buf [0:7];
-    reg [2:0] char_idx;
     reg [2:0] scan_idx;
     integer i;
     
@@ -37,20 +38,28 @@ module seg7_controller (
             scan_idx <= scan_idx + 1'b1;
     end
 
-    // Digit select
+    // Digit select: scan_idx 0 -> digit_sel[0] (leftmost)
     always @(*) begin
         digit_sel = 8'b00000001 << scan_idx;
     end
 
-    // Buffer management (1MHz domain for reliable char_valid detection)
+    // Buffer management with right-shift
+    // New char goes to [0], existing chars shift right ([0]->[1], [1]->[2], ...)
     always @(posedge clk or posedge rst) begin
         if (rst || clear) begin
             for (i = 0; i < 8; i = i + 1)
-                char_buf[i] <= 8'h20;
-            char_idx <= 3'd0;
+                char_buf[i] <= 8'h00;  // Empty (all segments off)
         end else if (char_valid_rise) begin
-            char_buf[char_idx] <= char_in;
-            char_idx <= (char_idx < 3'd7) ? char_idx + 1'b1 : 3'd0;
+            // Shift all characters to the right
+            char_buf[7] <= char_buf[6];
+            char_buf[6] <= char_buf[5];
+            char_buf[5] <= char_buf[4];
+            char_buf[4] <= char_buf[3];
+            char_buf[3] <= char_buf[2];
+            char_buf[2] <= char_buf[1];
+            char_buf[1] <= char_buf[0];
+            // New character at leftmost position
+            char_buf[0] <= char_in;
         end
     end
 
@@ -95,7 +104,7 @@ module seg7_controller (
             8'h39: seg = 8'b01101111; // 9
             8'h2D: seg = 8'b01000000; // -
             8'h2E: seg = 8'b10000000; // .
-            default: seg = 8'b00000000;
+            default: seg = 8'b00000000; // Empty
         endcase
     end
 
