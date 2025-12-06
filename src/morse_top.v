@@ -1,34 +1,45 @@
 // Morse Code Translator - Top Module
-// Mode 0: Alphabet -> Morse (Buzzer output)
-// Mode 1: Morse -> Alphabet (7-segment output)
+// Mode 0 (mode_sw=0): Alphabet -> Morse (Buzzer output)
+// Mode 1 (mode_sw=1): Morse -> Alphabet (7-segment output)
 
 module morse_top (
-    input  wire       clk,           // 1MHz clock
-    input  wire       rst,           // Reset button
-    input  wire       mode_sw,       // Mode switch (0: A->M, 1: M->A)
-    input  wire [7:0] btn,           // 8 push buttons
-    input  wire       btn_confirm,   // Confirm/Enter button
-    input  wire       btn_dot,       // Dot input (Mode 1)
-    input  wire       btn_dash,      // Dash input (Mode 1)
-    output wire [7:0] seg,           // 7-segment segments
-    output wire [7:0] digit_sel,     // 7-segment digit select
-    output wire       buzzer         // Piezo buzzer
+    input  wire        clk,           // 1MHz clock (B6)
+    input  wire        rst,           // Reset (DIP_SW8)
+    input  wire        mode_sw,       // Mode switch (DIP_SW1)
+    input  wire [11:0] btn,           // 12 push buttons (KEY01-KEY12)
+    output wire [7:0]  seg,           // 7-segment segments
+    output wire [7:0]  digit_sel,     // 7-segment digit select
+    output wire        buzzer         // Piezo buzzer (Y21)
 );
+
+    // Button mapping:
+    // Mode 0 (Alphabet->Morse): Phone Keypad
+    //   btn[0]=KEY01(1), btn[1]=KEY02(2:ABC), btn[2]=KEY03(3:DEF)
+    //   btn[3]=KEY04(4:GHI), btn[4]=KEY05(5:JKL), btn[5]=KEY06(6:MNO)
+    //   btn[6]=KEY07(7:PQRS), btn[7]=KEY08(8:TUV), btn[8]=KEY09(9:WXYZ)
+    //   btn[9]=KEY10(*), btn[10]=KEY11(0:Space), btn[11]=KEY12(#:Confirm)
+    //
+    // Mode 1 (Morse->Alphabet):
+    //   btn[0]=KEY01(Dot), btn[1]=KEY02(Dash), btn[2]=KEY03(Confirm)
 
     // Internal clocks
     wire clk_1khz, clk_500hz, clk_5hz;
     
     // Debounced buttons
-    wire [7:0] btn_db;
-    wire btn_confirm_db, btn_dot_db, btn_dash_db, rst_db;
+    wire [11:0] btn_db;
     
     // Mode 0 signals
+    wire [7:0] keypad_btn;      // Buttons for keypad (KEY02-KEY09)
+    wire keypad_confirm;         // Confirm for keypad (KEY12)
     wire [7:0] keypad_ascii;
     wire keypad_valid;
     wire [4:0] enc_morse_code;
     wire [2:0] enc_morse_len;
     
     // Mode 1 signals
+    wire morse_dot;              // Dot button (KEY01)
+    wire morse_dash;             // Dash button (KEY02)
+    wire morse_confirm;          // Confirm button (KEY03)
     wire [4:0] dec_morse_code;
     wire [2:0] dec_morse_len;
     wire decode_valid;
@@ -51,10 +62,10 @@ module morse_top (
         .clk_5hz(clk_5hz)
     );
     
-    // Debounce for all buttons
+    // Debounce for all 12 buttons
     genvar i;
     generate
-        for (i = 0; i < 8; i = i + 1) begin : btn_debounce
+        for (i = 0; i < 12; i = i + 1) begin : btn_debounce
             debounce u_db (
                 .clk_1khz(clk_1khz),
                 .rst(rst),
@@ -64,34 +75,23 @@ module morse_top (
         end
     endgenerate
     
-    debounce u_db_confirm (
-        .clk_1khz(clk_1khz),
-        .rst(rst),
-        .btn_in(btn_confirm),
-        .btn_out(btn_confirm_db)
-    );
+    // Button mapping for Mode 0 (Keypad)
+    // KEY02-KEY09 (btn[1]-btn[8]) -> keypad buttons for 2-9
+    assign keypad_btn = btn_db[8:1];
+    assign keypad_confirm = btn_db[11];  // KEY12 (#)
     
-    debounce u_db_dot (
-        .clk_1khz(clk_1khz),
-        .rst(rst),
-        .btn_in(btn_dot),
-        .btn_out(btn_dot_db)
-    );
-    
-    debounce u_db_dash (
-        .clk_1khz(clk_1khz),
-        .rst(rst),
-        .btn_in(btn_dash),
-        .btn_out(btn_dash_db)
-    );
+    // Button mapping for Mode 1 (Morse input)
+    assign morse_dot = btn_db[0];      // KEY01
+    assign morse_dash = btn_db[1];     // KEY02
+    assign morse_confirm = btn_db[2];  // KEY03
     
     // Mode 0: Keypad decoder
     keypad_decoder u_keypad (
         .clk(clk),
         .clk_5hz(clk_5hz),
         .rst(rst),
-        .btn(btn_db),
-        .btn_confirm(btn_confirm_db),
+        .btn(keypad_btn),
+        .btn_confirm(keypad_confirm),
         .ascii_out(keypad_ascii),
         .char_valid(keypad_valid)
     );
@@ -107,9 +107,9 @@ module morse_top (
     morse_input_fsm u_morse_input (
         .clk(clk),
         .rst(rst),
-        .btn_dot(btn_dot_db),
-        .btn_dash(btn_dash_db),
-        .btn_enter(btn_confirm_db),
+        .btn_dot(morse_dot),
+        .btn_dash(morse_dash),
+        .btn_enter(morse_confirm),
         .morse_code(dec_morse_code),
         .morse_len(dec_morse_len),
         .decode_valid(decode_valid)

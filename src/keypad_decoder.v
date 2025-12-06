@@ -1,19 +1,28 @@
 // Keypad Decoder - Phone style input
-// BTN 0-7 maps to keys 2-9 (ABC, DEF, GHI, JKL, MNO, PQRS, TUV, WXYZ)
+// Button mapping (from morse_top):
+//   btn[0] = KEY02 (2: ABC)
+//   btn[1] = KEY03 (3: DEF)
+//   btn[2] = KEY04 (4: GHI)
+//   btn[3] = KEY05 (5: JKL)
+//   btn[4] = KEY06 (6: MNO)
+//   btn[5] = KEY07 (7: PQRS)
+//   btn[6] = KEY08 (8: TUV)
+//   btn[7] = KEY09 (9: WXYZ)
+//   btn_confirm = KEY12 (#)
 // Same button press cycles through characters
-// Confirm button finalizes character
+// Confirm button (KEY12) finalizes character
 
 module keypad_decoder (
     input  wire       clk,
     input  wire       clk_5hz,
     input  wire       rst,
-    input  wire [7:0] btn,          // 8 buttons
-    input  wire       btn_confirm,  // Confirm current character
+    input  wire [7:0] btn,          // 8 buttons (KEY02-KEY09)
+    input  wire       btn_confirm,  // Confirm (KEY12)
     output reg  [7:0] ascii_out,
     output reg        char_valid
 );
 
-    // Character tables
+    // Character tables for phone keypad
     reg [7:0] char_table [0:7][0:3];  // [button][cycle]
     reg [2:0] char_count [0:7];        // chars per button
     
@@ -31,35 +40,35 @@ module keypad_decoder (
 
     // Initialize character tables
     initial begin
-        // Button 0 -> 2: ABC
+        // btn[0] = KEY02 -> 2: ABC
         char_table[0][0] = 8'h41; char_table[0][1] = 8'h42;
         char_table[0][2] = 8'h43; char_table[0][3] = 8'h00;
         char_count[0] = 3'd3;
-        // Button 1 -> 3: DEF
+        // btn[1] = KEY03 -> 3: DEF
         char_table[1][0] = 8'h44; char_table[1][1] = 8'h45;
         char_table[1][2] = 8'h46; char_table[1][3] = 8'h00;
         char_count[1] = 3'd3;
-        // Button 2 -> 4: GHI
+        // btn[2] = KEY04 -> 4: GHI
         char_table[2][0] = 8'h47; char_table[2][1] = 8'h48;
         char_table[2][2] = 8'h49; char_table[2][3] = 8'h00;
         char_count[2] = 3'd3;
-        // Button 3 -> 5: JKL
+        // btn[3] = KEY05 -> 5: JKL
         char_table[3][0] = 8'h4A; char_table[3][1] = 8'h4B;
         char_table[3][2] = 8'h4C; char_table[3][3] = 8'h00;
         char_count[3] = 3'd3;
-        // Button 4 -> 6: MNO
+        // btn[4] = KEY06 -> 6: MNO
         char_table[4][0] = 8'h4D; char_table[4][1] = 8'h4E;
         char_table[4][2] = 8'h4F; char_table[4][3] = 8'h00;
         char_count[4] = 3'd3;
-        // Button 5 -> 7: PQRS
+        // btn[5] = KEY07 -> 7: PQRS
         char_table[5][0] = 8'h50; char_table[5][1] = 8'h51;
         char_table[5][2] = 8'h52; char_table[5][3] = 8'h53;
         char_count[5] = 3'd4;
-        // Button 6 -> 8: TUV
+        // btn[6] = KEY08 -> 8: TUV
         char_table[6][0] = 8'h54; char_table[6][1] = 8'h55;
         char_table[6][2] = 8'h56; char_table[6][3] = 8'h00;
         char_count[6] = 3'd3;
-        // Button 7 -> 9: WXYZ
+        // btn[7] = KEY09 -> 9: WXYZ
         char_table[7][0] = 8'h57; char_table[7][1] = 8'h58;
         char_table[7][2] = 8'h59; char_table[7][3] = 8'h5A;
         char_count[7] = 3'd4;
@@ -86,14 +95,14 @@ module keypad_decoder (
         input [7:0] buttons;
         begin
             casez (buttons)
-                8'b???????1: get_btn_idx = 3'd0;
-                8'b??????10: get_btn_idx = 3'd1;
-                8'b?????100: get_btn_idx = 3'd2;
-                8'b????1000: get_btn_idx = 3'd3;
-                8'b???10000: get_btn_idx = 3'd4;
-                8'b??100000: get_btn_idx = 3'd5;
-                8'b?1000000: get_btn_idx = 3'd6;
-                8'b10000000: get_btn_idx = 3'd7;
+                8'b???????1: get_btn_idx = 3'd0;  // KEY02
+                8'b??????10: get_btn_idx = 3'd1;  // KEY03
+                8'b?????100: get_btn_idx = 3'd2;  // KEY04
+                8'b????1000: get_btn_idx = 3'd3;  // KEY05
+                8'b???10000: get_btn_idx = 3'd4;  // KEY06
+                8'b??100000: get_btn_idx = 3'd5;  // KEY07
+                8'b?1000000: get_btn_idx = 3'd6;  // KEY08
+                8'b10000000: get_btn_idx = 3'd7;  // KEY09
                 default: get_btn_idx = 3'd0;
             endcase
         end
@@ -138,7 +147,7 @@ module keypad_decoder (
                 end
             end
             
-            // Confirm button
+            // Confirm button (KEY12)
             if (confirm_rise && btn_active) begin
                 char_valid <= 1'b1;
                 btn_active <= 1'b0;
