@@ -1,30 +1,27 @@
-//==============================================================================
 // Clock Divider Module
-// 25MHz -> 1kHz (timing control), 800Hz (buzzer tone)
-//==============================================================================
+// Input: 1MHz clock
+// Outputs: Various divided clocks
+
 module clk_divider (
-    input  wire clk,        // 25MHz input clock
-    input  wire rst_n,      // Active low reset
-    output reg  clk_1khz,   // 1kHz output for timing
-    output reg  clk_800hz   // 800Hz output for buzzer tone
+    input  wire clk,
+    input  wire rst,
+    output reg  clk_1khz,
+    output reg  clk_500hz,
+    output reg  clk_5hz
 );
 
-    // 25MHz / 1kHz = 25000, half period = 12500
-    // 25MHz / 800Hz = 31250, half period = 15625
-    localparam DIV_1KHZ  = 12500 - 1;
-    localparam DIV_800HZ = 15625 - 1;
+    reg [9:0]  cnt_1khz;
+    reg [10:0] cnt_500hz;
+    reg [16:0] cnt_5hz;
 
-    reg [13:0] cnt_1khz;
-    reg [14:0] cnt_800hz;
-
-    // 1kHz clock generation
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            cnt_1khz <= 14'd0;
+    // 1kHz generation
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            cnt_1khz <= 10'd0;
             clk_1khz <= 1'b0;
         end else begin
-            if (cnt_1khz >= DIV_1KHZ) begin
-                cnt_1khz <= 14'd0;
+            if (cnt_1khz >= 10'd499) begin
+                cnt_1khz <= 10'd0;
                 clk_1khz <= ~clk_1khz;
             end else begin
                 cnt_1khz <= cnt_1khz + 1'b1;
@@ -32,20 +29,34 @@ module clk_divider (
         end
     end
 
-    // 800Hz clock generation
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            cnt_800hz <= 15'd0;
-            clk_800hz <= 1'b0;
+    // 500Hz generation
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            cnt_500hz <= 11'd0;
+            clk_500hz <= 1'b0;
         end else begin
-            if (cnt_800hz >= DIV_800HZ) begin
-                cnt_800hz <= 15'd0;
-                clk_800hz <= ~clk_800hz;
+            if (cnt_500hz >= 11'd999) begin
+                cnt_500hz <= 11'd0;
+                clk_500hz <= ~clk_500hz;
             end else begin
-                cnt_800hz <= cnt_800hz + 1'b1;
+                cnt_500hz <= cnt_500hz + 1'b1;
+            end
+        end
+    end
+
+    // 5Hz generation (200ms unit for morse)
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            cnt_5hz <= 17'd0;
+            clk_5hz <= 1'b0;
+        end else begin
+            if (cnt_5hz >= 17'd99999) begin
+                cnt_5hz <= 17'd0;
+                clk_5hz <= ~clk_5hz;
+            end else begin
+                cnt_5hz <= cnt_5hz + 1'b1;
             end
         end
     end
 
 endmodule
-

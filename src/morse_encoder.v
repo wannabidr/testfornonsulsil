@@ -1,75 +1,59 @@
-//==============================================================================
-// Morse Code Encoder ROM
-// Converts alphabet (A-Z, 0-25) to morse code pattern
-// Output format: {length[2:0], pattern[4:0]} where 0=dot, 1=dash
-// Pattern is LSB-first (first symbol in bit[0])
-//==============================================================================
+// Morse Encoder
+// Converts ASCII character to morse code sequence
+
 module morse_encoder (
-    input  wire [4:0] char_code,    // Input character (0-25 for A-Z)
-    output reg  [2:0] morse_len,    // Number of symbols (1-5)
-    output reg  [4:0] morse_pattern // Morse pattern (LSB first)
+    input  wire [7:0] ascii_in,
+    output reg  [4:0] morse_code,
+    output reg  [2:0] morse_len
 );
 
-    // International Morse Code lookup table
-    // A=0, B=1, ..., Z=25
+    // Morse code: 0 = dot, 1 = dash
+    // MSB first (first symbol in bit 4)
+    
     always @(*) begin
-        case (char_code)
-            // A: .-    (dot, dash)
-            5'd0:  begin morse_len = 3'd2; morse_pattern = 5'b00010; end
-            // B: -...  (dash, dot, dot, dot)
-            5'd1:  begin morse_len = 3'd4; morse_pattern = 5'b00001; end
-            // C: -.-.  (dash, dot, dash, dot)
-            5'd2:  begin morse_len = 3'd4; morse_pattern = 5'b00101; end
-            // D: -..   (dash, dot, dot)
-            5'd3:  begin morse_len = 3'd3; morse_pattern = 5'b00001; end
-            // E: .     (dot)
-            5'd4:  begin morse_len = 3'd1; morse_pattern = 5'b00000; end
-            // F: ..-.  (dot, dot, dash, dot)
-            5'd5:  begin morse_len = 3'd4; morse_pattern = 5'b00100; end
-            // G: --.   (dash, dash, dot)
-            5'd6:  begin morse_len = 3'd3; morse_pattern = 5'b00011; end
-            // H: ....  (dot, dot, dot, dot)
-            5'd7:  begin morse_len = 3'd4; morse_pattern = 5'b00000; end
-            // I: ..    (dot, dot)
-            5'd8:  begin morse_len = 3'd2; morse_pattern = 5'b00000; end
-            // J: .---  (dot, dash, dash, dash)
-            5'd9:  begin morse_len = 3'd4; morse_pattern = 5'b01110; end
-            // K: -.-   (dash, dot, dash)
-            5'd10: begin morse_len = 3'd3; morse_pattern = 5'b00101; end
-            // L: .-..  (dot, dash, dot, dot)
-            5'd11: begin morse_len = 3'd4; morse_pattern = 5'b00010; end
-            // M: --    (dash, dash)
-            5'd12: begin morse_len = 3'd2; morse_pattern = 5'b00011; end
-            // N: -.    (dash, dot)
-            5'd13: begin morse_len = 3'd2; morse_pattern = 5'b00001; end
-            // O: ---   (dash, dash, dash)
-            5'd14: begin morse_len = 3'd3; morse_pattern = 5'b00111; end
-            // P: .--.  (dot, dash, dash, dot)
-            5'd15: begin morse_len = 3'd4; morse_pattern = 5'b00110; end
-            // Q: --.-  (dash, dash, dot, dash)
-            5'd16: begin morse_len = 3'd4; morse_pattern = 5'b01011; end
-            // R: .-.   (dot, dash, dot)
-            5'd17: begin morse_len = 3'd3; morse_pattern = 5'b00010; end
-            // S: ...   (dot, dot, dot)
-            5'd18: begin morse_len = 3'd3; morse_pattern = 5'b00000; end
-            // T: -     (dash)
-            5'd19: begin morse_len = 3'd1; morse_pattern = 5'b00001; end
-            // U: ..-   (dot, dot, dash)
-            5'd20: begin morse_len = 3'd3; morse_pattern = 5'b00100; end
-            // V: ...-  (dot, dot, dot, dash)
-            5'd21: begin morse_len = 3'd4; morse_pattern = 5'b01000; end
-            // W: .--   (dot, dash, dash)
-            5'd22: begin morse_len = 3'd3; morse_pattern = 5'b00110; end
-            // X: -..-  (dash, dot, dot, dash)
-            5'd23: begin morse_len = 3'd4; morse_pattern = 5'b01001; end
-            // Y: -.--  (dash, dot, dash, dash)
-            5'd24: begin morse_len = 3'd4; morse_pattern = 5'b01101; end
-            // Z: --..  (dash, dash, dot, dot)
-            5'd25: begin morse_len = 3'd4; morse_pattern = 5'b00011; end
-            // Default: single dot
-            default: begin morse_len = 3'd1; morse_pattern = 5'b00000; end
+        case (ascii_in)
+            // Letters A-Z (uppercase)
+            8'h41: begin morse_code = 5'b01000; morse_len = 3'd2; end // A .-
+            8'h42: begin morse_code = 5'b10000; morse_len = 3'd4; end // B -...
+            8'h43: begin morse_code = 5'b10100; morse_len = 3'd4; end // C -.-.
+            8'h44: begin morse_code = 5'b10000; morse_len = 3'd3; end // D -..
+            8'h45: begin morse_code = 5'b00000; morse_len = 3'd1; end // E .
+            8'h46: begin morse_code = 5'b00100; morse_len = 3'd4; end // F ..-.
+            8'h47: begin morse_code = 5'b11000; morse_len = 3'd3; end // G --.
+            8'h48: begin morse_code = 5'b00000; morse_len = 3'd4; end // H ....
+            8'h49: begin morse_code = 5'b00000; morse_len = 3'd2; end // I ..
+            8'h4A: begin morse_code = 5'b01110; morse_len = 3'd4; end // J .---
+            8'h4B: begin morse_code = 5'b10100; morse_len = 3'd3; end // K -.-
+            8'h4C: begin morse_code = 5'b01000; morse_len = 3'd4; end // L .-..
+            8'h4D: begin morse_code = 5'b11000; morse_len = 3'd2; end // M --
+            8'h4E: begin morse_code = 5'b10000; morse_len = 3'd2; end // N -.
+            8'h4F: begin morse_code = 5'b11100; morse_len = 3'd3; end // O ---
+            8'h50: begin morse_code = 5'b01100; morse_len = 3'd4; end // P .--.
+            8'h51: begin morse_code = 5'b11010; morse_len = 3'd4; end // Q --.-
+            8'h52: begin morse_code = 5'b01000; morse_len = 3'd3; end // R .-.
+            8'h53: begin morse_code = 5'b00000; morse_len = 3'd3; end // S ...
+            8'h54: begin morse_code = 5'b10000; morse_len = 3'd1; end // T -
+            8'h55: begin morse_code = 5'b00100; morse_len = 3'd3; end // U ..-
+            8'h56: begin morse_code = 5'b00010; morse_len = 3'd4; end // V ...-
+            8'h57: begin morse_code = 5'b01100; morse_len = 3'd3; end // W .--
+            8'h58: begin morse_code = 5'b10010; morse_len = 3'd4; end // X -..-
+            8'h59: begin morse_code = 5'b10110; morse_len = 3'd4; end // Y -.--
+            8'h5A: begin morse_code = 5'b11000; morse_len = 3'd4; end // Z --..
+            
+            // Numbers 0-9
+            8'h30: begin morse_code = 5'b11111; morse_len = 3'd5; end // 0 -----
+            8'h31: begin morse_code = 5'b01111; morse_len = 3'd5; end // 1 .----
+            8'h32: begin morse_code = 5'b00111; morse_len = 3'd5; end // 2 ..---
+            8'h33: begin morse_code = 5'b00011; morse_len = 3'd5; end // 3 ...--
+            8'h34: begin morse_code = 5'b00001; morse_len = 3'd5; end // 4 ....-
+            8'h35: begin morse_code = 5'b00000; morse_len = 3'd5; end // 5 .....
+            8'h36: begin morse_code = 5'b10000; morse_len = 3'd5; end // 6 -....
+            8'h37: begin morse_code = 5'b11000; morse_len = 3'd5; end // 7 --...
+            8'h38: begin morse_code = 5'b11100; morse_len = 3'd5; end // 8 ---..
+            8'h39: begin morse_code = 5'b11110; morse_len = 3'd5; end // 9 ----.
+            
+            default: begin morse_code = 5'b00000; morse_len = 3'd0; end
         endcase
     end
 
 endmodule
-
