@@ -39,8 +39,9 @@ module seg7_controller (
     end
 
     // Digit select: scan_idx 0 -> digit_sel[0] (leftmost)
+    // Active-low: LOW activates the digit
     always @(*) begin
-        digit_sel = 8'b00000001 << scan_idx;
+        digit_sel = ~(8'b00000001 << scan_idx);
     end
 
     // Buffer management with right-shift
