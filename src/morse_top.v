@@ -20,7 +20,7 @@ module morse_top (
     //   btn[9]=KEY10(*), btn[10]=KEY11(0:Space), btn[11]=KEY12(#:Confirm)
     //
     // Mode 1 (Morse->Alphabet):
-    //   btn[0]=KEY01(Dot), btn[1]=KEY02(Dash), btn[2]=KEY03(Confirm)
+    //   btn[9]=KEY10(Dot), btn[10]=KEY11(Dash), btn[11]=KEY12(Confirm)
 
     // Internal clocks
     wire clk_1khz, clk_500hz, clk_5hz;
@@ -37,9 +37,9 @@ module morse_top (
     wire [2:0] enc_morse_len;
     
     // Mode 1 signals
-    wire morse_dot;              // Dot button (KEY01)
-    wire morse_dash;             // Dash button (KEY02)
-    wire morse_confirm;          // Confirm button (KEY03)
+    wire morse_dot;              // Dot button (KEY10)
+    wire morse_dash;             // Dash button (KEY11)
+    wire morse_confirm;          // Confirm button (KEY12)
     wire [4:0] dec_morse_code;
     wire [2:0] dec_morse_len;
     wire decode_valid;
@@ -81,9 +81,9 @@ module morse_top (
     assign keypad_confirm = btn_db[11];  // KEY12 (#)
     
     // Button mapping for Mode 1 (Morse input)
-    assign morse_dot = btn_db[0];      // KEY01
-    assign morse_dash = btn_db[1];     // KEY02
-    assign morse_confirm = btn_db[2];  // KEY03
+    assign morse_dot = btn_db[9];      // KEY10
+    assign morse_dash = btn_db[10];    // KEY11
+    assign morse_confirm = btn_db[11]; // KEY12
     
     // Mode 0: Keypad decoder
     keypad_decoder u_keypad (
