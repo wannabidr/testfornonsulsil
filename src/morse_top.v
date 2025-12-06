@@ -145,6 +145,7 @@ module morse_top (
     
     // 7-segment controller
     seg7_controller u_seg7 (
+        .clk(clk),
         .clk_500hz(clk_500hz),
         .rst(rst),
         .char_in(display_char),

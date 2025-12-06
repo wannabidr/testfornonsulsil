@@ -2,7 +2,8 @@
 // Common Cathode (HIGH = ON)
 
 module seg7_controller (
-    input  wire       clk_500hz,
+    input  wire       clk,        // 1MHz main clock for char_valid detection
+    input  wire       clk_500hz,  // For display scanning
     input  wire       rst,
     input  wire [7:0] char_in,
     input  wire       char_valid,
@@ -15,8 +16,20 @@ module seg7_controller (
     reg [2:0] char_idx;
     reg [2:0] scan_idx;
     integer i;
+    
+    // Edge detection for char_valid (in 1MHz domain)
+    reg char_valid_prev;
+    wire char_valid_rise;
+    
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            char_valid_prev <= 1'b0;
+        else
+            char_valid_prev <= char_valid;
+    end
+    assign char_valid_rise = char_valid & ~char_valid_prev;
 
-    // Scan digits
+    // Scan digits (500Hz domain)
     always @(posedge clk_500hz or posedge rst) begin
         if (rst)
             scan_idx <= 3'd0;
@@ -29,13 +42,13 @@ module seg7_controller (
         digit_sel = 8'b00000001 << scan_idx;
     end
 
-    // Buffer management
-    always @(posedge clk_500hz or posedge rst) begin
+    // Buffer management (1MHz domain for reliable char_valid detection)
+    always @(posedge clk or posedge rst) begin
         if (rst || clear) begin
             for (i = 0; i < 8; i = i + 1)
                 char_buf[i] <= 8'h20;
             char_idx <= 3'd0;
-        end else if (char_valid) begin
+        end else if (char_valid_rise) begin
             char_buf[char_idx] <= char_in;
             char_idx <= (char_idx < 3'd7) ? char_idx + 1'b1 : 3'd0;
         end

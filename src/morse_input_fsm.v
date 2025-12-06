@@ -1,5 +1,6 @@
 // Morse Input FSM
 // Captures dot/dash button inputs and builds morse sequence
+// MSB-first: first input goes to bit 4, second to bit 3, etc.
 
 module morse_input_fsm (
     input  wire       clk,
@@ -32,7 +33,8 @@ module morse_input_fsm (
     assign dash_rise = btn_dash & ~btn_dash_prev;
     assign enter_rise = btn_enter & ~btn_enter_prev;
 
-    // Input capture
+    // Input capture - MSB first
+    // First input -> bit 4, second -> bit 3, etc.
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             morse_code <= 5'b00000;
@@ -42,10 +44,24 @@ module morse_input_fsm (
             decode_valid <= 1'b0;
             
             if (dot_rise && morse_len < 3'd5) begin
-                morse_code <= {morse_code[3:0], 1'b0};
+                // Store dot (0) at position (4 - morse_len)
+                case (morse_len)
+                    3'd0: morse_code[4] <= 1'b0;
+                    3'd1: morse_code[3] <= 1'b0;
+                    3'd2: morse_code[2] <= 1'b0;
+                    3'd3: morse_code[1] <= 1'b0;
+                    3'd4: morse_code[0] <= 1'b0;
+                endcase
                 morse_len <= morse_len + 1'b1;
             end else if (dash_rise && morse_len < 3'd5) begin
-                morse_code <= {morse_code[3:0], 1'b1};
+                // Store dash (1) at position (4 - morse_len)
+                case (morse_len)
+                    3'd0: morse_code[4] <= 1'b1;
+                    3'd1: morse_code[3] <= 1'b1;
+                    3'd2: morse_code[2] <= 1'b1;
+                    3'd3: morse_code[1] <= 1'b1;
+                    3'd4: morse_code[0] <= 1'b1;
+                endcase
                 morse_len <= morse_len + 1'b1;
             end else if (enter_rise && morse_len > 0) begin
                 decode_valid <= 1'b1;
