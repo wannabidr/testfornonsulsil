@@ -1,13 +1,15 @@
 // Text LCD Controller for Morse Translator
 // 1MHz clock version with dynamic character input
-// 16x2 LCD, Row 1: Input characters (left to right)
+// 16x2 LCD, supports dual row display with transfer feature
 
 module text_lcd_controller (
-    input  wire       clk,         // 1MHz
+    input  wire       clk,            // 1MHz
     input  wire       rst,
-    input  wire [7:0] char_in,     // Input character (ASCII)
-    input  wire       char_valid,  // Character valid pulse
-    input  wire       clear,       // Clear buffer
+    input  wire [7:0] char_in,        // Input character (ASCII)
+    input  wire       char_valid,     // Character valid pulse
+    input  wire       char_to_row2,   // 1=input to row2, 0=input to row1
+    input  wire       transfer_to_row1, // Transfer row2 to row1
+    input  wire       clear,          // Clear buffer
     output reg        lcd_rs,
     output reg        lcd_rw,
     output reg        lcd_en,
@@ -19,10 +21,12 @@ module text_lcd_controller (
     parameter S_INIT_1      = 4'd1;
     parameter S_INIT_2      = 4'd2;
     parameter S_INIT_3      = 4'd3;
-    parameter S_SET_ADDR    = 4'd4;
-    parameter S_WRITE_DATA  = 4'd5;
-    parameter S_WAIT_INPUT  = 4'd6;
-    parameter S_REFRESH     = 4'd7;
+    parameter S_SET_ROW1    = 4'd4;
+    parameter S_WRITE_ROW1  = 4'd5;
+    parameter S_SET_ROW2    = 4'd6;
+    parameter S_WRITE_ROW2  = 4'd7;
+    parameter S_WAIT_INPUT  = 4'd8;
+    parameter S_REFRESH     = 4'd9;
 
     reg [3:0] state;
     reg [4:0] lcd_col_cnt;
@@ -31,9 +35,11 @@ module text_lcd_controller (
     localparam DELAY_CYCLES = 14'd2000;
     reg [13:0] delay_cnt;
     
-    // Character buffer (16 characters for row 1)
-    reg [7:0] char_buf [0:15];
-    reg [3:0] char_count;
+    // Character buffers (16 characters each)
+    reg [7:0] row1_buf [0:15];
+    reg [7:0] row2_buf [0:15];
+    reg [3:0] row1_count;
+    reg [3:0] row2_count;
     integer i;
     
     // Edge detection for char_valid
@@ -48,7 +54,19 @@ module text_lcd_controller (
     end
     assign char_valid_rise = char_valid & ~char_valid_prev;
     
-    // Clear edge detection
+    // Edge detection for transfer
+    reg transfer_prev;
+    wire transfer_rise;
+    
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            transfer_prev <= 1'b0;
+        else
+            transfer_prev <= transfer_to_row1;
+    end
+    assign transfer_rise = transfer_to_row1 & ~transfer_prev;
+    
+    // Edge detection for clear
     reg clear_prev;
     wire clear_rise;
     
@@ -65,19 +83,43 @@ module text_lcd_controller (
     
     always @(posedge clk or posedge rst) begin
         if (rst || clear_rise) begin
-            for (i = 0; i < 16; i = i + 1)
-                char_buf[i] <= 8'h20;  // Space
-            char_count <= 4'd0;
+            for (i = 0; i < 16; i = i + 1) begin
+                row1_buf[i] <= 8'h20;  // Space
+                row2_buf[i] <= 8'h20;
+            end
+            row1_count <= 4'd0;
+            row2_count <= 4'd0;
+            buffer_updated <= 1'b1;
+        end else if (transfer_rise) begin
+            // Transfer row2 to row1, clear row2
+            for (i = 0; i < 16; i = i + 1) begin
+                row1_buf[i] <= row2_buf[i];
+                row2_buf[i] <= 8'h20;
+            end
+            row1_count <= row2_count;
+            row2_count <= 4'd0;
             buffer_updated <= 1'b1;
         end else if (char_valid_rise) begin
-            if (char_count < 16) begin
-                char_buf[char_count] <= char_in;
-                char_count <= char_count + 1;
+            if (char_to_row2) begin
+                // Input to row2
+                if (row2_count < 16) begin
+                    row2_buf[row2_count] <= char_in;
+                    row2_count <= row2_count + 1;
+                end else begin
+                    for (i = 0; i < 15; i = i + 1)
+                        row2_buf[i] <= row2_buf[i + 1];
+                    row2_buf[15] <= char_in;
+                end
             end else begin
-                // Buffer full: shift left, add new at end
-                for (i = 0; i < 15; i = i + 1)
-                    char_buf[i] <= char_buf[i + 1];
-                char_buf[15] <= char_in;
+                // Input to row1
+                if (row1_count < 16) begin
+                    row1_buf[row1_count] <= char_in;
+                    row1_count <= row1_count + 1;
+                end else begin
+                    for (i = 0; i < 15; i = i + 1)
+                        row1_buf[i] <= row1_buf[i + 1];
+                    row1_buf[15] <= char_in;
+                end
             end
             buffer_updated <= 1'b1;
         end else if (state == S_WAIT_INPUT) begin
@@ -96,8 +138,8 @@ module text_lcd_controller (
             lcd_col_cnt <= 5'd0;
             delay_cnt <= 14'd0;
         end else begin
-            // Enable pulse at middle of delay (1ms point, 50us width)
             if (state != S_WAIT_INPUT) begin
+                // Enable pulse at middle of delay
                 if ((delay_cnt >= 14'd1000) && (delay_cnt < 14'd1050))
                     lcd_en <= 1'b1;
                 else
@@ -130,20 +172,37 @@ module text_lcd_controller (
                         S_INIT_3: begin
                             lcd_rs <= 1'b0;
                             lcd_data <= 8'h06;  // Entry mode: increment
-                            state <= S_SET_ADDR;
+                            state <= S_SET_ROW1;
                         end
                         
-                        S_SET_ADDR: begin
+                        S_SET_ROW1: begin
                             lcd_rs <= 1'b0;
-                            lcd_data <= 8'h80;  // Set DDRAM address: Row 1, Col 0
+                            lcd_data <= 8'h80;  // DDRAM address: Row 1, Col 0
                             lcd_col_cnt <= 5'd0;
-                            state <= S_WRITE_DATA;
+                            state <= S_WRITE_ROW1;
                         end
                         
-                        S_WRITE_DATA: begin
+                        S_WRITE_ROW1: begin
                             if (lcd_col_cnt < 16) begin
                                 lcd_rs <= 1'b1;
-                                lcd_data <= char_buf[lcd_col_cnt];
+                                lcd_data <= row1_buf[lcd_col_cnt];
+                                lcd_col_cnt <= lcd_col_cnt + 1;
+                            end else begin
+                                state <= S_SET_ROW2;
+                            end
+                        end
+                        
+                        S_SET_ROW2: begin
+                            lcd_rs <= 1'b0;
+                            lcd_data <= 8'hC0;  // DDRAM address: Row 2, Col 0
+                            lcd_col_cnt <= 5'd0;
+                            state <= S_WRITE_ROW2;
+                        end
+                        
+                        S_WRITE_ROW2: begin
+                            if (lcd_col_cnt < 16) begin
+                                lcd_rs <= 1'b1;
+                                lcd_data <= row2_buf[lcd_col_cnt];
                                 lcd_col_cnt <= lcd_col_cnt + 1;
                             end else begin
                                 state <= S_WAIT_INPUT;
@@ -156,14 +215,13 @@ module text_lcd_controller (
                         
                         S_REFRESH: begin
                             lcd_rs <= 1'b0;
-                            lcd_data <= 8'h80;  // Set DDRAM address: Row 1, Col 0
+                            lcd_data <= 8'h80;  // DDRAM address: Row 1, Col 0
                             lcd_col_cnt <= 5'd0;
-                            state <= S_WRITE_DATA;
+                            state <= S_WRITE_ROW1;
                         end
                     endcase
                 end
             end else begin
-                // S_WAIT_INPUT: wait for new input
                 lcd_en <= 1'b0;
                 if (buffer_updated) begin
                     state <= S_REFRESH;
