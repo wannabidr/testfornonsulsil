@@ -40,22 +40,32 @@ module morse_top (
     // Buzzer signals
     wire buzzer_busy;
     
-    // Mode 0 buffering: 2-second delay timer
+    // Character queue for Mode 0 (max 16 entries)
     localparam DELAY_2SEC = 21'd2000000;  // 2s at 1MHz
-    reg [20:0] delay_timer;
-    reg waiting_transfer;
-    reg transfer_trigger;
-    reg delayed_buzzer_start;
     
-    // Stored morse code for delayed buzzer
-    reg [4:0] stored_morse_code;
-    reg [2:0] stored_morse_len;
+    reg [7:0]  queue_char [0:15];
+    reg [4:0]  queue_morse [0:15];
+    reg [2:0]  queue_len [0:15];
+    reg [20:0] queue_timer [0:15];
+    reg [3:0]  queue_head;  // Next to process
+    reg [3:0]  queue_tail;  // Next write position
+    reg queue_empty;
+    
+    // Processing state
+    reg transfer_trigger;
+    reg buzzer_trigger;
+    reg [7:0] transfer_char;
+    reg [4:0] transfer_morse;
+    reg [2:0] transfer_len;
     
     // LCD control signals
     wire [7:0] lcd_char;
     wire lcd_char_valid;
     wire lcd_char_to_row2;
     wire lcd_transfer;
+    wire [7:0] lcd_transfer_char;
+    
+    integer i;
     
     // Clock divider
     clk_divider u_clk_div (
@@ -67,14 +77,14 @@ module morse_top (
     );
     
     // Debounce for all 12 buttons
-    genvar i;
+    genvar gi;
     generate
-        for (i = 0; i < 12; i = i + 1) begin : btn_debounce
+        for (gi = 0; gi < 12; gi = gi + 1) begin : btn_debounce
             debounce u_db (
                 .clk_1khz(clk_1khz),
                 .rst(rst),
-                .btn_in(btn[i]),
-                .btn_out(btn_db[i])
+                .btn_in(btn[gi]),
+                .btn_out(btn_db[gi])
             );
         end
     endgenerate
@@ -125,52 +135,83 @@ module morse_top (
         .ascii_out(decoded_ascii)
     );
     
-    // Mode 0: 2-second delay timer logic
+    // Queue management and timer logic
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            delay_timer <= 21'd0;
-            waiting_transfer <= 1'b0;
+            queue_head <= 4'd0;
+            queue_tail <= 4'd0;
+            queue_empty <= 1'b1;
             transfer_trigger <= 1'b0;
-            delayed_buzzer_start <= 1'b0;
-            stored_morse_code <= 5'd0;
-            stored_morse_len <= 3'd0;
+            buzzer_trigger <= 1'b0;
+            transfer_char <= 8'd0;
+            transfer_morse <= 5'd0;
+            transfer_len <= 3'd0;
+            for (i = 0; i < 16; i = i + 1) begin
+                queue_char[i] <= 8'd0;
+                queue_morse[i] <= 5'd0;
+                queue_len[i] <= 3'd0;
+                queue_timer[i] <= 21'd0;
+            end
         end else begin
             transfer_trigger <= 1'b0;
-            delayed_buzzer_start <= 1'b0;
+            buzzer_trigger <= 1'b0;
             
+            // Add new character to queue (Mode 0 only)
             if (~mode_sw && keypad_valid) begin
-                // Mode 0: Start 2-second timer, store morse code
-                delay_timer <= 21'd0;
-                waiting_transfer <= 1'b1;
-                stored_morse_code <= enc_morse_code;
-                stored_morse_len <= enc_morse_len;
-            end else if (waiting_transfer) begin
-                if (delay_timer < DELAY_2SEC) begin
-                    delay_timer <= delay_timer + 1;
-                end else begin
-                    // 2 seconds elapsed: trigger transfer and buzzer
-                    transfer_trigger <= 1'b1;
-                    delayed_buzzer_start <= 1'b1;
-                    waiting_transfer <= 1'b0;
-                    delay_timer <= 21'd0;
+                queue_char[queue_tail] <= keypad_ascii;
+                queue_morse[queue_tail] <= enc_morse_code;
+                queue_len[queue_tail] <= enc_morse_len;
+                queue_timer[queue_tail] <= 21'd0;
+                queue_tail <= queue_tail + 1;
+                queue_empty <= 1'b0;
+            end
+            
+            // Increment timers for all queued items
+            if (!queue_empty) begin
+                for (i = 0; i < 16; i = i + 1) begin
+                    // Check if this slot is in active range
+                    if ((queue_head <= queue_tail && i >= queue_head && i < queue_tail) ||
+                        (queue_head > queue_tail && (i >= queue_head || i < queue_tail))) begin
+                        if (queue_timer[i] < DELAY_2SEC) begin
+                            queue_timer[i] <= queue_timer[i] + 1;
+                        end
+                    end
+                end
+            end
+            
+            // Check if head item is ready (2 seconds elapsed) and buzzer is free
+            if (!queue_empty && !buzzer_busy && queue_timer[queue_head] >= DELAY_2SEC) begin
+                // Transfer this character
+                transfer_char <= queue_char[queue_head];
+                transfer_morse <= queue_morse[queue_head];
+                transfer_len <= queue_len[queue_head];
+                transfer_trigger <= 1'b1;
+                buzzer_trigger <= 1'b1;
+                
+                // Advance head
+                queue_head <= queue_head + 1;
+                
+                // Check if queue becomes empty
+                if (queue_head + 1 == queue_tail) begin
+                    queue_empty <= 1'b1;
                 end
             end
         end
     end
     
     // LCD character selection
-    // Mode 0: keypad_ascii to row2, Mode 1: decoded_ascii to row1
+    // Mode 0: keypad_ascii to row2
+    // Mode 1: decoded_ascii to row1
     assign lcd_char = mode_sw ? decoded_ascii : keypad_ascii;
     assign lcd_char_valid = mode_sw ? decode_valid : keypad_valid;
-    assign lcd_char_to_row2 = ~mode_sw;  // Mode 0: input to row2
+    assign lcd_char_to_row2 = ~mode_sw;
     assign lcd_transfer = transfer_trigger;
+    assign lcd_transfer_char = transfer_char;
     
     // Buzzer control
-    // Mode 0: delayed start after 2 seconds
-    // Mode 1: no buzzer
-    wire buzzer_start_signal = (~mode_sw) & delayed_buzzer_start & (~buzzer_busy);
-    wire [4:0] buzzer_morse = stored_morse_code;
-    wire [2:0] buzzer_len = stored_morse_len;
+    wire buzzer_start_signal = (~mode_sw) & buzzer_trigger & (~buzzer_busy);
+    wire [4:0] buzzer_morse = transfer_morse;
+    wire [2:0] buzzer_len_out = transfer_len;
     
     // Buzzer driver
     buzzer_driver u_buzzer (
@@ -179,7 +220,7 @@ module morse_top (
         .rst(rst),
         .start(buzzer_start_signal),
         .morse_code(buzzer_morse),
-        .morse_len(buzzer_len),
+        .morse_len(buzzer_len_out),
         .buzzer_out(buzzer),
         .busy(buzzer_busy)
     );
@@ -192,6 +233,7 @@ module morse_top (
         .char_valid(lcd_char_valid),
         .char_to_row2(lcd_char_to_row2),
         .transfer_to_row1(lcd_transfer),
+        .transfer_char(lcd_transfer_char),
         .clear(rst),
         .lcd_rs(lcd_rs),
         .lcd_rw(lcd_rw),
