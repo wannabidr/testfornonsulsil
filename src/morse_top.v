@@ -1,14 +1,16 @@
 // Morse Code Translator - Top Module
-// Mode 0 (mode_sw=0): Alphabet -> Morse (Buzzer output)
-// Mode 1 (mode_sw=1): Morse -> Alphabet (7-segment output)
+// Mode 0 (mode_sw=0): Alphabet -> Morse (Buzzer output + LCD display)
+// Mode 1 (mode_sw=1): Morse -> Alphabet (LCD display)
 
 module morse_top (
     input  wire        clk,           // 1MHz clock (B6)
     input  wire        rst,           // Reset (DIP_SW8)
     input  wire        mode_sw,       // Mode switch (DIP_SW1)
     input  wire [11:0] btn,           // 12 push buttons (KEY01-KEY12)
-    output wire [7:0]  seg,           // 7-segment segments
-    output wire [7:0]  digit_sel,     // 7-segment digit select
+    output wire        lcd_rs,        // LCD RS
+    output wire        lcd_rw,        // LCD RW
+    output wire        lcd_en,        // LCD Enable
+    output wire [7:0]  lcd_data,      // LCD Data
     output wire        buzzer         // Piezo buzzer (Y21)
 );
 
@@ -29,17 +31,17 @@ module morse_top (
     wire [11:0] btn_db;
     
     // Mode 0 signals
-    wire [7:0] keypad_btn;      // Buttons for keypad (KEY02-KEY09)
-    wire keypad_confirm;         // Confirm for keypad (KEY12)
+    wire [7:0] keypad_btn;
+    wire keypad_confirm;
     wire [7:0] keypad_ascii;
     wire keypad_valid;
     wire [4:0] enc_morse_code;
     wire [2:0] enc_morse_len;
     
     // Mode 1 signals
-    wire morse_dot;              // Dot button (KEY10)
-    wire morse_dash;             // Dash button (KEY11)
-    wire morse_confirm;          // Confirm button (KEY12)
+    wire morse_dot;
+    wire morse_dash;
+    wire morse_confirm;
     wire [4:0] dec_morse_code;
     wire [2:0] dec_morse_len;
     wire decode_valid;
@@ -76,14 +78,13 @@ module morse_top (
     endgenerate
     
     // Button mapping for Mode 0 (Keypad)
-    // KEY02-KEY09 (btn[1]-btn[8]) -> keypad buttons for 2-9
     assign keypad_btn = btn_db[8:1];
-    assign keypad_confirm = btn_db[11];  // KEY12 (#)
+    assign keypad_confirm = btn_db[11];
     
     // Button mapping for Mode 1 (Morse input)
-    assign morse_dot = btn_db[9];      // KEY10
-    assign morse_dash = btn_db[10];    // KEY11
-    assign morse_confirm = btn_db[11]; // KEY12
+    assign morse_dot = btn_db[9];
+    assign morse_dash = btn_db[10];
+    assign morse_confirm = btn_db[11];
     
     // Mode 0: Keypad decoder
     keypad_decoder u_keypad (
@@ -143,16 +144,17 @@ module morse_top (
         .busy(buzzer_busy)
     );
     
-    // 7-segment controller
-    seg7_controller u_seg7 (
+    // Text LCD controller
+    text_lcd_controller u_lcd (
         .clk(clk),
-        .clk_500hz(clk_500hz),
         .rst(rst),
         .char_in(display_char),
         .char_valid(display_valid),
         .clear(rst),
-        .seg(seg),
-        .digit_sel(digit_sel)
+        .lcd_rs(lcd_rs),
+        .lcd_rw(lcd_rw),
+        .lcd_en(lcd_en),
+        .lcd_data(lcd_data)
     );
 
 endmodule

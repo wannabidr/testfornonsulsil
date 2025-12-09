@@ -25,26 +25,18 @@ set_property -dict {PACKAGE_PIN L7 IOSTANDARD LVCMOS33} [get_ports {btn[9]}]
 set_property -dict {PACKAGE_PIN L1 IOSTANDARD LVCMOS33} [get_ports {btn[10]}]
 set_property -dict {PACKAGE_PIN K6 IOSTANDARD LVCMOS33} [get_ports {btn[11]}]
 
-## 7-Segment Display - Segments
-## seg[0]=a, seg[1]=b, seg[2]=c, seg[3]=d, seg[4]=e, seg[5]=f, seg[6]=g, seg[7]=dp
-set_property -dict {PACKAGE_PIN F1 IOSTANDARD LVCMOS33} [get_ports {seg[0]}]
-set_property -dict {PACKAGE_PIN F5 IOSTANDARD LVCMOS33} [get_ports {seg[1]}]
-set_property -dict {PACKAGE_PIN E2 IOSTANDARD LVCMOS33} [get_ports {seg[2]}]
-set_property -dict {PACKAGE_PIN E4 IOSTANDARD LVCMOS33} [get_ports {seg[3]}]
-set_property -dict {PACKAGE_PIN J1 IOSTANDARD LVCMOS33} [get_ports {seg[4]}]
-set_property -dict {PACKAGE_PIN J3 IOSTANDARD LVCMOS33} [get_ports {seg[5]}]
-set_property -dict {PACKAGE_PIN J7 IOSTANDARD LVCMOS33} [get_ports {seg[6]}]
-set_property -dict {PACKAGE_PIN H2 IOSTANDARD LVCMOS33} [get_ports {seg[7]}]
-
-## 7-Segment Digit Select [7:0] - S0 to S7
-set_property -dict {PACKAGE_PIN H4 IOSTANDARD LVCMOS33} [get_ports {digit_sel[0]}]
-set_property -dict {PACKAGE_PIN H6 IOSTANDARD LVCMOS33} [get_ports {digit_sel[1]}]
-set_property -dict {PACKAGE_PIN G1 IOSTANDARD LVCMOS33} [get_ports {digit_sel[2]}]
-set_property -dict {PACKAGE_PIN G3 IOSTANDARD LVCMOS33} [get_ports {digit_sel[3]}]
-set_property -dict {PACKAGE_PIN L6 IOSTANDARD LVCMOS33} [get_ports {digit_sel[4]}]
-set_property -dict {PACKAGE_PIN K1 IOSTANDARD LVCMOS33} [get_ports {digit_sel[5]}]
-set_property -dict {PACKAGE_PIN K3 IOSTANDARD LVCMOS33} [get_ports {digit_sel[6]}]
-set_property -dict {PACKAGE_PIN K5 IOSTANDARD LVCMOS33} [get_ports {digit_sel[7]}]
+## Text LCD
+set_property -dict {PACKAGE_PIN A4 IOSTANDARD LVCMOS33} [get_ports {lcd_data[0]}]
+set_property -dict {PACKAGE_PIN B2 IOSTANDARD LVCMOS33} [get_ports {lcd_data[1]}]
+set_property -dict {PACKAGE_PIN C3 IOSTANDARD LVCMOS33} [get_ports {lcd_data[2]}]
+set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVCMOS33} [get_ports {lcd_data[3]}]
+set_property -dict {PACKAGE_PIN A2 IOSTANDARD LVCMOS33} [get_ports {lcd_data[4]}]
+set_property -dict {PACKAGE_PIN C5 IOSTANDARD LVCMOS33} [get_ports {lcd_data[5]}]
+set_property -dict {PACKAGE_PIN C1 IOSTANDARD LVCMOS33} [get_ports {lcd_data[6]}]
+set_property -dict {PACKAGE_PIN D1 IOSTANDARD LVCMOS33} [get_ports {lcd_data[7]}]
+set_property -dict {PACKAGE_PIN A6 IOSTANDARD LVCMOS33} [get_ports lcd_en]
+set_property -dict {PACKAGE_PIN G6 IOSTANDARD LVCMOS33} [get_ports lcd_rs]
+set_property -dict {PACKAGE_PIN D6 IOSTANDARD LVCMOS33} [get_ports lcd_rw]
 
 ## Piezo Buzzer
 set_property -dict {PACKAGE_PIN Y21 IOSTANDARD LVCMOS33} [get_ports buzzer]
